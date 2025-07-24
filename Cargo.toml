@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-untwine="0.9.3"
+untwine = "0.9.3"
+cel-rs = { git = "https://github.com/stlab/cel-rs" }

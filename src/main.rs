@@ -1,7 +1,10 @@
-use untwine::{parser, parser_repl};
+use untwine::{parser};
+use untwine::context::ParserContext;
+use untwine::pretty::PrettyOptions;
+use cel_rs::{DynSegment};
 
 parser! {
-    [recover = true]
+    [recover = true, context = ctx, data = DynSegment]
     __ = #{char::is_ascii_whitespace}*;
     pub expression = or_expression -> ();
     or_expression = and_expression (__ "||" __ and_expression)* -> ();
@@ -14,11 +17,16 @@ parser! {
     additive_expression = multiplicative_expression (__ ("+" | "-") __ multiplicative_expression)* -> ();
     multiplicative_expression = unary_expression (__ ("*" | "/" | "%") __ unary_expression)* -> ();
     unary_expression = ((("-" | "!") __ unary_expression) | primary_expression) -> ();
-    primary_expression = ("(" __ expression __ ")" | literal | identifier) -> ();
-    literal = #["0123456789"]+ -> ();
+    primary_expression: ("(" __ expression __ ")" | literal | identifier) -> () {}
+    literal: digits=<'0'-'9'+> -> () { let r: u32 = digits.parse().unwrap(); ctx.data_mut().op0(move || r) }
     identifier = #["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"]+ -> ();
 }
 
+static TEST: &str = "42";
+
 fn main() {
-    parser_repl(expression);
+    let mut ctx = ParserContext::new(TEST, DynSegment::new::<()>());
+    let result = expression(&ctx);
+    let _ = ctx.pretty_result(result, PrettyOptions::default());
+    println!("{:?}", ctx.data_mut().call0::<u32>().unwrap());
 }
